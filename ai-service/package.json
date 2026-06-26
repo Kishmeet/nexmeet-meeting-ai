@@ -12,6 +12,8 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@deepgram/sdk": "^5.4.0",
+    "@livekit/rtc-node": "^0.13.29",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",

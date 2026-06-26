@@ -2,6 +2,12 @@ const mongoose = require("mongoose");
 
 const meetingSchema = new mongoose.Schema(
   {
+    meetingId: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+
     transcript: {
       type: String,
       required: true,

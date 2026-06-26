@@ -1,17 +1,10 @@
 const express = require("express");
-
-const {
-  createToken,
-  createNewRoom,
-  getAllRooms,
-} = require("../controllers/livekitController");
-
 const router = express.Router();
 
-router.post("/token", createToken);
+const {
+  getToken,
+} = require("../controllers/livekitController");
 
-router.post("/room", createNewRoom);
-
-router.get("/rooms", getAllRooms);
+router.get("/token", getToken);
 
 module.exports = router;

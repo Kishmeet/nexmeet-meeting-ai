@@ -1,74 +1,31 @@
 const {
-  generateToken,
-  createRoom,
-  listRooms,
-} = require("../services/livekitService");
+  generateUserToken,
+} = require("../services/livekitTokenService");
 
-// Generate participant token
-exports.createToken = async (req, res) => {
+async function getToken(req, res) {
   try {
-    const { roomName, participantName } = req.body;
+    const room = req.query.room || "test-room";
+    const identity = req.query.identity || "test-user";
 
-    if (!roomName || !participantName) {
-      return res.status(400).json({
-        success: false,
-        message: "roomName and participantName are required",
-      });
-    }
+    const token = await generateUserToken(
+      room,
+      identity
+    );
 
-    const token = await generateToken(roomName, participantName);
-
-    res.status(200).json({
-      success: true,
-      token,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-// Create a new room
-exports.createNewRoom = async (req, res) => {
-  try {
-    const { roomName } = req.body;
-
-    if (!roomName) {
-      return res.status(400).json({
-        success: false,
-        message: "roomName is required",
-      });
-    }
-
-    const room = await createRoom(roomName);
-
-    res.status(201).json({
+    res.json({
       success: true,
       room,
+      identity,
+      token,
     });
-  } catch (error) {
+  } catch (err) {
     res.status(500).json({
       success: false,
-      message: error.message,
+      error: err.message,
     });
   }
-};
+}
 
-// Get all active rooms
-exports.getAllRooms = async (req, res) => {
-  try {
-    const rooms = await listRooms();
-
-    res.status(200).json({
-      success: true,
-      rooms,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
+module.exports = {
+  getToken,
 };

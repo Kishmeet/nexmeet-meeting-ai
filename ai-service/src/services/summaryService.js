@@ -1,74 +1,70 @@
-const OpenAI = require("openai");
 const parseAIResponse = require("../utils/parseAIResponse");
+const chunkTranscript = require("../utils/chunkTranscript");
 
-const client = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: "https://openrouter.ai/api/v1",
-});
+const { generateCompletion } = require("./openRouterService");
+
+async function summarize(text) {
+  return await generateCompletion(`Meeting Transcript:\n\n${text}`);
+}
 
 async function createSummary(transcript) {
   try {
-    console.log("Using Model:", process.env.OPENROUTER_MODEL);
+    const chunks = chunkTranscript(transcript);
 
-    const start = Date.now();
+    let rawResponse;
 
-    const response = await client.chat.completions.create({
-      model: process.env.OPENROUTER_MODEL,
+    if (chunks.length === 1) {
+      rawResponse = await summarize(transcript);
+    } else {
+      console.log(`Large meeting detected. ${chunks.length} chunks.`);
 
-      messages: [
-        {
-          role: "system",
-          content: `
-You are an AI Meeting Assistant.
-Generate Summary only in English 
-Return ONLY valid JSON.
-Do not use markdown.
-Do not use code blocks.
-Do not add explanations.
+      const partialSummaries = [];
 
-Format:
-{
-  "summary": "",
-  "keyPoints": [],
-  "actionItems": []
-}
-          `,
-        },
-        {
-          role: "user",
-          content: `
-Meeting Transcript:
+      for (let i = 0; i < chunks.length; i++) {
+        console.log(`Summarizing chunk ${i + 1}/${chunks.length}`);
 
-${transcript}
-          `,
-        },
-      ],
+        partialSummaries.push(await summarize(chunks[i]));
+      }
 
-      temperature: 0.3,
-    });
+      rawResponse = await generateCompletion(
+        `You are NexMeet AI.
+      You are given multiple partial summaries generated from different sections of the same meeting.
 
-    const end = Date.now();
+      Merge them into ONE final meeting summary.
 
-    console.log(`LLM Time: ${end - start} ms`);
+      Rules:
 
-    console.log("Actual Model Used:", response.model);
+      - Preserve the overall flow of the meeting.
+      - Remove duplicate information.
+      - Merge similar key points.
+      - Keep only unique action items.
+      - Do not invent missing information.
+      - Ignore repeated speech caused by transcript chunking.
+      - Use only information present in the partial summaries.
+      - Return ONLY valid JSON.
 
-    const content = response.choices?.[0]?.message?.content;
+      JSON format:
 
-    if (!content) {
-      throw new Error("No response received");
+      {
+        "summary":"",
+        "keyPoints":[],
+        "actionItems":[]
+      }
+If the transcript is educational, motivational, a tutorial, podcast, YouTube video, lecture, or monologue, return an empty actionItems array 
+unless a speaker explicitly assigns a task.
+      ${partialSummaries.join("\n\n")}`,
+      );
     }
 
     console.log("Raw Response:");
-    console.log(content);
+    console.log(rawResponse);
 
-    return parseAIResponse(content);
-  } catch (error) {
+    return parseAIResponse(rawResponse);
+  } catch (err) {
     console.error("Summary Service Error:");
+    console.error(err);
 
-    console.error(error);
-
-    throw error;
+    throw err;
   }
 }
 
